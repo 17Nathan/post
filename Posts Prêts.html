@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Posts Prêts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<style>
+/* Layout : boutiques en haut, plateforme en dessous, puis le type de contenu (descriptions, commentaires, titres, réglages) et une liste d'entrées à copier d'un tap. Pensé pour le pouce. */
+:root{
+  --bg:#F7F8FB; --surface:#FFFFFF; --fg:#1F2633; --muted:#6B7484; --line:#DEE3EC;
+  --accent:#3F7BD9; --accent-fg:#FFFFFF; --soft:#E8F0FC; --danger:#C94F6D; --ok:#2E9E6B;
+  --yt:#E0303C; --tt:#111318; --ig:#D6336C; --fb:#1877F2;
+  --display:'Sora',system-ui,sans-serif; --body:'Manrope',system-ui,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#13161C; --surface:#1C2029; --fg:#EEF1F6; --muted:#9AA3B2; --line:#2E3440;
+  --accent:#6FA2F0; --accent-fg:#0E1420; --soft:#1F2C42; --danger:#E0708A; --ok:#4DBB87;
+  --tt:#F2F3F5; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#13161C; --surface:#1C2029; --fg:#EEF1F6; --muted:#9AA3B2; --line:#2E3440;
+  --accent:#6FA2F0; --accent-fg:#0E1420; --soft:#1F2C42; --danger:#E0708A; --ok:#4DBB87;
+  --tt:#F2F3F5; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 60px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;padding:0}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;resize:vertical;line-height:1.5}
+textarea{min-height:80px}
+.muted{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding-block:14px 8px;border-bottom:1px solid var(--line)}
+.top h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.top .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.status{font-size:12px;color:var(--muted);white-space:nowrap}
+.status.ok{color:var(--ok)}
+
+.shops{display:flex;gap:8px;overflow-x:auto;padding-block:10px 6px;scrollbar-width:none}
+.shops::-webkit-scrollbar{display:none}
+.shop{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px;white-space:nowrap}
+.shop[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.shop.add{border-style:dashed;color:var(--muted);font-weight:500}
+
+.plats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.plat{padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px}
+.plat .dot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.plat[aria-selected="true"]{border-color:var(--c);box-shadow:inset 0 -3px 0 var(--c)}
+
+.kinds{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.kinds::-webkit-scrollbar{display:none}
+.kind{flex:0 0 auto;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:600}
+.kind[aria-selected="true"]{background:var(--soft);border-color:var(--accent);color:var(--accent)}
+.kind .n{color:var(--muted);font-weight:500;margin-left:4px;font-variant-numeric:tabular-nums}
+
+.shopbar{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.shopbar h2{font-size:18px;font-weight:700}
+.btn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:5px 9px;font-size:12px}
+
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center;justify-content:space-between}
+.bulk{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.bulk .hint{font-size:13px;color:var(--muted)}
+
+.list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.item .text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px;min-width:0}
+.item .text.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.item .meta{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.count{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.count.over{color:var(--danger);font-weight:700}
+.copy{padding:8px 14px;border-radius:10px;background:var(--accent);color:var(--accent-fg);font-weight:700;font-size:13px}
+.copy.done{background:var(--ok);color:#fff}
+.ghost{padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line)}
+.ghost.danger{color:var(--danger)}
+.confirm{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--danger);flex-wrap:wrap}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:500;background:var(--surface)}
+.chip.on{background:var(--soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip .x{color:var(--muted);font-size:15px;line-height:1;padding:0 2px}
+.chip.addc{border-style:dashed;color:var(--muted)}
+.chip input{border:0;background:transparent;padding:0;width:140px;font-size:13px}
+
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;color:var(--muted);margin-top:12px}
+.empty b{color:var(--fg);display:block;font-family:var(--display);font-size:16px;margin-bottom:6px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (min-width:600px){ .item{padding:14px 18px} .plat{font-size:14px} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="row">
+      <div class="grow">
+        <h1>Posts Prêts</h1>
+        <div class="sub">Tes descriptions, commentaires épinglés, titres et réglages, par boutique et par plateforme. Un tap pour copier.</div>
+      </div>
+      <div class="status" id="status">Chargement…</div>
+    </div>
+    <div class="shops" id="shops" role="tablist"></div>
+  </header>
+  <div id="app"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  const PLATS = [
+    {id:'youtube', nom:'YouTube', c:'var(--yt)', limits:{titres:100, descriptions:5000},
+      reglages:['Short (vertical 9:16)','Pas conçu pour les enfants','Contenu modifié ou synthétique (IA)','Commentaires activés','Public','Notifier les abonnés']},
+    {id:'tiktok', nom:'TikTok', c:'var(--tt)', limits:{descriptions:2200},
+      reglages:['Vidéo faite avec IA','Commentaires activés','Duo autorisé','Collage (Stitch) autorisé','Public','Contenu commercial : ma marque']},
+    {id:'instagram', nom:'Instagram', c:'var(--ig)', limits:{descriptions:2200},
+      reglages:['Reel','Partager aussi sur Facebook','Commentaires activés','Étiquette contenu IA','Partager dans le feed']},
+    {id:'facebook', nom:'Facebook', c:'var(--fb)', limits:{descriptions:63206},
+      reglages:['Reel','Commentaires activés','Étiquette contenu IA','Public']},
+  ];
+  const PLAT_IDS = PLATS.map(p=>p.id);
+  const KINDS = [
+    {id:'descriptions', nom:'Descriptions', one:'description', ph:'Texte de la description avec les hashtags'},
+    {id:'commentaires', nom:'Commentaires à épingler', one:'commentaire', ph:'Le commentaire que tu épingles après la publication'},
+    {id:'titres', nom:'Titres', one:'titre', ph:'Titre de la vidéo', only:['youtube']},
+    {id:'reglages', nom:'Réglages'},
+  ];
+
+  const DEFAULT_SHOPS = {"squishdo": {"nom": "Squishdo", "createdAt": 1761266400000, "plateformes": {"youtube": {"titres": [{"id": "yt00", "text": "Le calendrier de l'Avent que tous les enfants veulent cette année 🎄"}, {"id": "yt01", "text": "Interdit de le vendre en magasin ? Le calendrier squishy est en ligne"}, {"id": "yt02", "text": "24 squishies cachés jusqu'à Noël (ASMR)"}, {"id": "yt03", "text": "On ouvre le calendrier squishy case par case 📦"}, {"id": "yt04", "text": "Un calendrier de l'Avent qui reste après Noël"}, {"id": "yt05", "text": "3… 2… 1… révélation du calendrier squishy"}, {"id": "yt06", "text": "Le cadeau de Noël qui calme les matins"}, {"id": "yt07", "text": "Fromage, dumpling, canard pailleté : ce qu'il y a dans le calendrier squishy"}], "descriptions": [{"id": "yd00", "text": "🎄 24 Squishy à découvrir ! 🎁 Dispo sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd01", "text": "🎁 Un Squishy par jour jusqu'à Noël ! 🎄 Dispo sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd02", "text": "🧸 Le calendrier de l'Avent Squishy est là ! 🎄 Commande sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd03", "text": "🎅 Noël approche ! 🎁 24 Squishy à ouvrir, dispo sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd04", "text": "😍 24 Squishy, 24 jours de surprises ! 🎄 Dispo sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd05", "text": "🎁 Le cadeau parfait pour Noël ! 🧸 Calendrier Squishy sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd06", "text": "👀 Tu veux le même calendrier Squishy ? 🎄 Dispo sur squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}, {"id": "yd07", "text": "🧸 Le calendrier Squishy qui va faire craquer les enfants ! 🎁 squishdo.com 👉 lien sur ma chaîne #squishy #noël #shorts"}], "commentaires": [{"id": "yc00", "text": "🎄 CALENDRIER DE L'AVENT SQUISHY DISPONIBLE SUR SQUISHDO.COM 🎁 LIEN SUR NOTRE CHAÎNE 🧸"}, {"id": "yc01", "text": "🎁 24 SURPRISES SQUISHY POUR NOËL ! 🎄 LE LIEN EST SUR NOTRE CHAÎNE ✨"}, {"id": "yc02", "text": "🧸 TON CALENDRIER SQUISHY T'ATTEND ! 🎅 RETROUVE LE LIEN SUR NOTRE CHAÎNE 🎁"}, {"id": "yc03", "text": "🎄 LE CADEAU PARFAIT POUR NOËL ! 🎁 CALENDRIER SQUISHY DISPO SUR SQUISHDO.COM 🧸"}, {"id": "yc04", "text": "🎁 UN SQUISHY À OUVRIR CHAQUE JOUR ! 🧸 COMMANDE TON CALENDRIER VIA LE LIEN DE NOTRE CHAÎNE 🎄"}, {"id": "yc05", "text": "😍 QUI RÊVE D'AVOIR 24 SQUISHY POUR NOËL ? 🎄🎁 LIEN SUR NOTRE CHAÎNE 🧸"}, {"id": "yc06", "text": "🎅 NOËL APPROCHE ! 🎁 LE CALENDRIER SQUISHY EST SUR SQUISHDO.COM, LIEN SUR LA CHAÎNE 🧸"}, {"id": "yc07", "text": "🧸 TU VEUX LE MÊME ? 👀 LE CALENDRIER SQUISHY EST DISPONIBLE, LIEN SUR NOTRE CHAÎNE 🎁🎄"}], "reglages": [{"label": "Short (vertical 9:16)", "on": true}, {"label": "Pas conçu pour les enfants", "on": true}, {"label": "Commentaires activés", "on": true}, {"label": "Public", "on": true}, {"label": "Notifier les abonnés", "on": true}]}, "tiktok": {"titres": [], "descriptions": [{"id": "td00", "text": "Commente « Squishy » 👇 si tu veux ton calendrier aussi et recevoir le lien pour commander 🥰🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td01", "text": "Commente « Calendrier » si toi aussi tu en veux un 🎄🤭 #squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td02", "text": "🎁🧸 Un Squishy à découvrir chaque jour jusqu'à Noël ! 🎄✨ Commente « SQUISHY » pour recevoir le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td03", "text": "🎁🧸 Le calendrier Squishy qui va faire craquer les enfants ! 🎄✨ Commente « SQUISHY » pour recevoir le lien !\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td04", "text": "🎄 24 Squishy, 24 jours de surprises ! 🎁 Commente « SQUISHY » 👇 et je t'envoie le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td05", "text": "🎅 Noël approche ! 🎁 Commente « Squishy » si tu veux le calendrier pour tes enfants, le lien arrive en privé 🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td06", "text": "😍 Qui rêve d'avoir 24 Squishy pour Noël ? 🎄 Commente « SQUISHY » pour recevoir le lien 🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td07", "text": "👀 Tu veux le même ? Commente « Calendrier » 👇 et je t'envoie le lien pour commander 🎄🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td08", "text": "🧸 Un Squishy par jour jusqu'à Noël, et ils restent après les fêtes ! 🎁 Commente « SQUISHY » pour le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "td09", "text": "🎁 Le cadeau parfait pour Noël ! 🎄 Commente « SQUISHY » 👇 pour recevoir le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}], "commentaires": [{"id": "tc00", "text": "🎁 LE CALENDRIER SQUISHY EST ENFIN LÀ ! 🎄 DISPONIBLE DANS LA BIO DE NOTRE TIKTOK 🧸"}, {"id": "tc01", "text": "🧸 24 SQUISHY, 24 JOURS DE SURPRISES ! 🎄 RETROUVE LE LIEN DANS NOTRE BIO TIKTOK 🎁"}, {"id": "tc02", "text": "🎄 TU VEUX LE MÊME CALENDRIER SQUISHY ? 👀🎁 IL EST DISPONIBLE DANS NOTRE BIO TIKTOK !"}, {"id": "tc03", "text": "🎅 NOËL APPROCHE ! 🎁 TON CALENDRIER DE L'AVENT SQUISHY EST À RETROUVER EN BIO TIKTOK 🧸"}, {"id": "tc04", "text": "😍 QUI RÊVE D'AVOIR 24 SQUISHY POUR NOËL ? 🎄🎁 COMMANDE LE TIEN VIA NOTRE BIO TIKTOK 🧸"}, {"id": "tc05", "text": "🎁 UN SQUISHY À OUVRIR CHAQUE JOUR JUSQU'À NOËL ! 🧸 LIEN DANS NOTRE BIO TIKTOK 🎄"}, {"id": "tc06", "text": "🧸 LE CADEAU PARFAIT POUR NOËL ! 🎁 CALENDRIER SQUISHY DISPONIBLE EN BIO TIKTOK ✨"}, {"id": "tc07", "text": "🎄 CALENDRIER DE L'AVENT SQUISHY DISPONIBLE DANS LA BIO DE NOTRE TIKTOK 🎁🧸"}], "reglages": [{"label": "Vidéo faite avec IA", "on": false}, {"label": "Commentaires activés", "on": true}, {"label": "Duo autorisé", "on": true}, {"label": "Collage (Stitch) autorisé", "on": true}, {"label": "Public", "on": true}, {"label": "Contenu commercial : ma marque", "on": true}]}, "instagram": {"titres": [], "descriptions": [{"id": "id00", "text": "Commente « Squishy » 👇 si tu veux ton calendrier aussi et recevoir le lien pour commander 🥰🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id01", "text": "Commente « Calendrier » si toi aussi tu en veux un 🎄🤭 #squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id02", "text": "🎁🧸 Un Squishy à découvrir chaque jour jusqu'à Noël ! 🎄✨ Commente « SQUISHY » pour recevoir le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id03", "text": "🎁🧸 Le calendrier Squishy qui va faire craquer les enfants ! 🎄✨ Commente « SQUISHY » pour recevoir le lien !\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id04", "text": "🎄 24 Squishy, 24 jours de surprises ! 🎁 Commente « SQUISHY » 👇 et je t'envoie le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id05", "text": "🎅 Noël approche ! 🎁 Commente « Squishy » si tu veux le calendrier pour tes enfants, le lien arrive en privé 🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id06", "text": "😍 Qui rêve d'avoir 24 Squishy pour Noël ? 🎄 Commente « SQUISHY » pour recevoir le lien 🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id07", "text": "👀 Tu veux le même ? Commente « Calendrier » 👇 et je t'envoie le lien pour commander 🎄🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id08", "text": "🧸 Un Squishy par jour jusqu'à Noël, et ils restent après les fêtes ! 🎁 Commente « SQUISHY » pour le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "id09", "text": "🎁 Le cadeau parfait pour Noël ! 🎄 Commente « SQUISHY » 👇 pour recevoir le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}], "commentaires": [{"id": "ic00", "text": "🎄 CALENDRIER DE L'AVENT SQUISHY DISPONIBLE DANS LA BIO DE NOTRE INSTAGRAM 🎁🧸"}, {"id": "ic01", "text": "🎁 24 SURPRISES SQUISHY POUR NOËL ! 🎄 LIEN DIRECT DANS NOTRE BIO INSTAGRAM ✨"}, {"id": "ic02", "text": "🧸 TON CALENDRIER SQUISHY T'ATTEND ! 🎅 RETROUVE-LE DANS LA BIO DE NOTRE INSTAGRAM 🎁"}, {"id": "ic03", "text": "🎄 LE CADEAU PARFAIT POUR NOËL ! 🎁 CALENDRIER SQUISHY DISPONIBLE EN BIO INSTAGRAM 🧸"}, {"id": "ic04", "text": "🎁 UN SQUISHY À OUVRIR CHAQUE JOUR ! 🧸 COMMANDE TON CALENDRIER VIA NOTRE BIO INSTAGRAM 🎄"}, {"id": "ic05", "text": "🎅 NOËL APPROCHE ! 🎄 LE CALENDRIER SQUISHY EST DANS LA BIO DE NOTRE INSTAGRAM 🎁🧸"}, {"id": "ic06", "text": "😍 24 SQUISHY, 24 JOURS DE SURPRISES ! 🎁 LIEN DANS NOTRE BIO INSTAGRAM 🎄"}, {"id": "ic07", "text": "🧸 TU VEUX LE MÊME ? 👀 LE CALENDRIER SQUISHY EST DISPONIBLE DANS NOTRE BIO INSTAGRAM 🎁🎄"}], "reglages": [{"label": "Reel", "on": true}, {"label": "Partager aussi sur Facebook", "on": false}, {"label": "Commentaires activés", "on": true}, {"label": "Étiquette contenu IA", "on": false}, {"label": "Partager dans le feed", "on": true}]}, "facebook": {"titres": [], "descriptions": [{"id": "fd00", "text": "Commente « Squishy » 👇 si tu veux ton calendrier aussi et recevoir le lien pour commander 🥰🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd01", "text": "Commente « Calendrier » si toi aussi tu en veux un 🎄🤭 #squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd02", "text": "🎁🧸 Un Squishy à découvrir chaque jour jusqu'à Noël ! 🎄✨ Commente « SQUISHY » pour recevoir le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd03", "text": "🎁🧸 Le calendrier Squishy qui va faire craquer les enfants ! 🎄✨ Commente « SQUISHY » pour recevoir le lien !\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd04", "text": "🎄 24 Squishy, 24 jours de surprises ! 🎁 Commente « SQUISHY » 👇 et je t'envoie le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd05", "text": "🎅 Noël approche ! 🎁 Commente « Squishy » si tu veux le calendrier pour tes enfants, le lien arrive en privé 🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd06", "text": "😍 Qui rêve d'avoir 24 Squishy pour Noël ? 🎄 Commente « SQUISHY » pour recevoir le lien 🎁\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd07", "text": "👀 Tu veux le même ? Commente « Calendrier » 👇 et je t'envoie le lien pour commander 🎄🧸\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd08", "text": "🧸 Un Squishy par jour jusqu'à Noël, et ils restent après les fêtes ! 🎁 Commente « SQUISHY » pour le lien\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}, {"id": "fd09", "text": "🎁 Le cadeau parfait pour Noël ! 🎄 Commente « SQUISHY » 👇 pour recevoir le lien pour commander\n#squishy #enfant #calendrierdelavent #cadeau #noel #maman"}], "commentaires": [{"id": "fc00", "text": "🧸 CALENDRIER DE L'AVENT SQUISHY DISPONIBLE DANS LA BIO DE NOTRE PROFIL FACEBOOK 🎄🎁"}, {"id": "fc01", "text": "🎁 UN SQUISHY PAR JOUR JUSQU'À NOËL ! 🎄 COMMANDE VIA LE LIEN DANS NOTRE BIO FACEBOOK 🧸✨"}, {"id": "fc02", "text": "🎄 LE CALENDRIER SQUISHY EST DISPONIBLE ! 🎁 RETROUVE-LE DANS LA BIO DE NOTRE PROFIL FACEBOOK 🧸✨"}, {"id": "fc03", "text": "🧸 TON CALENDRIER DE L'AVENT SQUISHY T'ATTEND ! 🎄 DISPONIBLE DANS NOTRE BIO FACEBOOK 🎁✨"}, {"id": "fc04", "text": "🎁 24 SQUISHY À DÉCOUVRIR ! LIEN DANS LA BIO DE NOTRE PROFIL FACEBOOK 🎄🧸✨"}, {"id": "fc05", "text": "🎄 CALENDRIER SQUISHY DISPONIBLE DANS LA BIO DE NOTRE PROFIL FACEBOOK 🎁🧸✨"}, {"id": "fc06", "text": "🎅 NOËL APPROCHE ! 🎁 LE CALENDRIER SQUISHY EST DANS LA BIO DE NOTRE PROFIL FACEBOOK 🧸"}, {"id": "fc07", "text": "😍 24 SURPRISES SQUISHY POUR NOËL ! 🎄 LIEN DIRECT DANS NOTRE BIO FACEBOOK 🎁✨"}], "reglages": [{"label": "Reel", "on": true}, {"label": "Commentaires activés", "on": true}, {"label": "Étiquette contenu IA", "on": false}, {"label": "Public", "on": true}]}}}};
+  let shops = {};
+  let currentShop = null, currentPlat = 'youtube', currentKind = 'descriptions';
+  let db = null;
+  const pendingConfirm = {}, editing = {}, expanded = {};
+  let showBulk = false;
+
+  const $ = s => document.querySelector(s);
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function emptyPlat(platId){
+    const p = PLATS.find(x=>x.id===platId);
+    return {descriptions:[], commentaires:[], titres:[], reglages:p.reglages.map(l=>({label:l,on:true}))};
+  }
+  function emptyShop(nom){
+    const plateformes = {};
+    PLAT_IDS.forEach(id => plateformes[id] = emptyPlat(id));
+    return {nom, createdAt: Date.now(), plateformes};
+  }
+  // Compat : ancienne structure "modeles" -> listes
+  function normalize(doc){
+    doc.plateformes = doc.plateformes || {};
+    PLAT_IDS.forEach(id=>{
+      const old = doc.plateformes[id] || {};
+      if(old.modeles){
+        const n = emptyPlat(id);
+        old.modeles.forEach(m=>{
+          if(m.titre) n.titres.push({id:uid(), text:m.titre});
+          if(m.description) n.descriptions.push({id:uid(), text:m.description});
+          if(m.commentaire) n.commentaires.push({id:uid(), text:m.commentaire});
+        });
+        if(old.modeles[0] && old.modeles[0].reglages) n.reglages = old.modeles[0].reglages;
+        doc.plateformes[id] = n;
+      } else {
+        const n = emptyPlat(id);
+        ['descriptions','commentaires','titres','reglages'].forEach(k=>{ if(Array.isArray(old[k])) n[k]=old[k]; });
+        doc.plateformes[id] = n;
+      }
+    });
+    return doc;
+  }
+
+  // ----- persistance -----
+  const localKey = 'posts-prets-v2';
+  function loadLocal(){ try{ const r = localStorage.getItem(localKey); if(r){ shops = JSON.parse(r); Object.values(shops).forEach(normalize); } }catch(e){} }
+  function saveLocal(){ try{ localStorage.setItem(localKey, JSON.stringify(shops)); }catch(e){} }
+  function savePref(k,v){ try{ localStorage.setItem('pp-'+k, v); }catch(e){} }
+  function getPref(k){ try{ return localStorage.getItem('pp-'+k); }catch(e){ return null; } }
+
+  const writeQueue = {}, dirty = {};
+  const holdLocal = id => (writeQueue[id] && writeQueue[id].timer) || dirty[id] > 0;
+  function persist(shopId){
+    saveLocal();
+    if(!db) return;
+    const q = writeQueue[shopId] || (writeQueue[shopId] = {timer:null, chain:Promise.resolve()});
+    clearTimeout(q.timer);
+    q.timer = setTimeout(()=>{
+      q.timer = null;
+      const data = shops[shopId]; if(!data) return;
+      setStatus('Enregistrement…');
+      dirty[shopId] = (dirty[shopId]||0) + 1;
+      q.chain = q.chain.then(()=>db.collection('boutiques').doc(shopId).set(JSON.parse(JSON.stringify(data))))
+        .then(()=>setStatus('Enregistré', true))
+        .catch(e=>{ console.error(e); setStatus('Pas enregistré en ligne (gardé sur cet appareil)'); })
+        .finally(()=>{ dirty[shopId]--; if(dirty[shopId]<=0) delete dirty[shopId]; });
+    }, 700);
+  }
+  async function removeShop(shopId){
+    delete shops[shopId]; saveLocal();
+    if(db){ try{ await db.collection('boutiques').doc(shopId).delete(); }catch(e){ console.error(e); } }
+  }
+  function setStatus(t, ok){ const s=$('#status'); s.textContent=t; s.classList.toggle('ok', !!ok); }
+
+  // ----- rendu -----
+  function shopList(){ return Object.entries(shops).map(([id,d])=>({id,...d})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); }
+  function cur(){ const s=shops[currentShop]; return s ? s.plateformes[currentPlat] : null; }
+
+  function renderShops(){
+    const el = $('#shops');
+    const list = shopList();
+    if(currentShop && !shops[currentShop]) currentShop = null;
+    if(!currentShop && list.length) currentShop = getPref('shop') && shops[getPref('shop')] ? getPref('shop') : list[0].id;
+    el.innerHTML = list.map(s=>`<button class="shop" role="tab" aria-selected="${s.id===currentShop}" data-shop="${s.id}">${esc(s.nom)}</button>`).join('')
+      + `<button class="shop add" id="addShop">+ Boutique</button>`;
+  }
+
+  function renderApp(){
+    const app = $('#app');
+    const shop = shops[currentShop];
+    if(!shop){
+      app.innerHTML = `<div class="empty"><b>Aucune boutique pour l'instant</b>Appuie sur « + Boutique » en haut pour créer la première, puis remplis ses listes par plateforme.</div>`;
+      return;
+    }
+    const plat = PLATS.find(p=>p.id===currentPlat);
+    const data = cur();
+    const kinds = KINDS.filter(k=>!k.only || k.only.includes(currentPlat));
+    if(!kinds.find(k=>k.id===currentKind)) currentKind='descriptions';
+    const kind = kinds.find(k=>k.id===currentKind);
+    const key = 'shop:'+currentShop;
+    const total = id => data[id].length;
+
+    let body='';
+    if(kind.id==='reglages'){
+      body = `<div class="tools"><span class="muted" style="font-size:13px">Ce que tu coches dans ${plat.nom} au moment de publier. Tape sur un réglage pour l'activer ou non.</span><button class="copy" data-copyreg="1">Copier la liste</button></div>
+        <div class="chips" style="margin-top:12px">
+          ${data.reglages.map((r,i)=>`<span class="chip ${r.on?'on':''}"><button data-tog="${i}" aria-pressed="${r.on}">${r.on?'✓ ':''}${esc(r.label)}</button><button class="x" data-rm="${i}" aria-label="Retirer ce réglage">×</button></span>`).join('')}
+          <span class="chip addc"><input type="text" id="addReg" placeholder="+ ajouter un réglage"></span>
+        </div>`;
+    } else {
+      const items = data[kind.id];
+      const limit = plat.limits[kind.id];
+      body = `<div class="tools">
+          <span class="muted" style="font-size:13px">${items.length ? items.length+' '+(items.length>1?kind.nom.toLowerCase():kind.one) : 'Aucun '+kind.one+' pour l\'instant'}</span>
+          <span class="row"><button class="btn small" id="toggleBulk">${showBulk?'Fermer':'Coller plusieurs'}</button><button class="btn primary small" id="addOne">+ Ajouter</button></span>
+        </div>
+        ${showBulk ? `<div class="bulk">
+          <div class="hint">Colle plusieurs ${kind.nom.toLowerCase()} d'un coup : une entrée par paragraphe (sépare-les par une ligne vide).</div>
+          <textarea id="bulkText" rows="6" placeholder="Premier ${kind.one}…\n\nDeuxième ${kind.one}…"></textarea>
+          <div class="row" style="justify-content:flex-end"><button class="btn primary" id="bulkAdd">Ajouter tout</button></div>
+        </div>` : ''}
+        ${items.length ? `<div class="list">${items.map(it=>renderItem(it, kind, limit)).join('')}</div>`
+          : `<div class="empty"><b>Liste vide</b>Ajoute un ${kind.one}, ou colle-en plusieurs d'un coup.</div>`}`;
+    }
+
+    app.innerHTML = `
+      <div class="shopbar">
+        <h2 class="grow" id="shopName">${esc(shop.nom)}</h2>
+        <button class="btn small" id="renameShop">Renommer</button>
+        ${pendingConfirm[key]
+          ? `<span class="confirm">Supprimer « ${esc(shop.nom)} » et toutes ses listes ? <button class="btn small danger" id="delShopYes">Oui, supprimer</button><button class="btn small" id="delShopNo">Annuler</button></span>`
+          : `<button class="btn small danger" id="delShop">Supprimer</button>`}
+      </div>
+      <div class="plats" role="tablist">
+        ${PLATS.map(p=>`<button class="plat" role="tab" style="--c:${p.c}" aria-selected="${p.id===currentPlat}" data-plat="${p.id}"><span class="dot"></span>${p.nom}</button>`).join('')}
+      </div>
+      <div class="kinds" role="tablist">
+        ${kinds.map(k=>`<button class="kind" role="tab" aria-selected="${k.id===currentKind}" data-kind="${k.id}">${k.nom}${k.id!=='reglages'?`<span class="n">${total(k.id)}</span>`:''}</button>`).join('')}
+      </div>
+      ${body}`;
+  }
+
+  function renderItem(it, kind, limit){
+    const n=[...(it.text||'')].length;
+    const count = limit ? `<span class="count ${n>limit?'over':''}">${n} / ${limit}</span>` : `<span class="count">${n} caractères</span>`;
+    const key='it:'+it.id;
+    if(editing[it.id]){
+      return `<article class="item" data-item="${it.id}">
+        <textarea id="t-${it.id}" data-edit="${it.id}" rows="5" placeholder="${esc(kind.ph)}">${esc(it.text)}</textarea>
+        <div class="meta">${count}<span class="row"><button class="ghost" data-cancel="${it.id}">Annuler</button><button class="copy" data-save="${it.id}">Enregistrer</button></span></div>
+      </article>`;
+    }
+    const long = (it.text||'').split('\n').length>4 || n>260;
+    return `<article class="item" data-item="${it.id}">
+      <div class="text ${long && !expanded[it.id] ? 'clamp':''}" data-expand="${it.id}">${esc(it.text)||'<span class="muted">(vide)</span>'}</div>
+      <div class="meta">
+        <span class="row">${count}${long?`<button class="ghost" data-expand="${it.id}">${expanded[it.id]?'Réduire':'Voir tout'}</button>`:''}</span>
+        <span class="row">
+          ${pendingConfirm[key]
+            ? `<span class="confirm">Supprimer ? <button class="ghost danger" data-delyes="${it.id}">Oui</button><button class="ghost" data-delno="${it.id}">Non</button></span>`
+            : `<button class="ghost danger" data-del="${it.id}">Supprimer</button><button class="ghost" data-edit-btn="${it.id}">Modifier</button>`}
+          <button class="copy" data-copy="${it.id}">Copier</button>
+        </span>
+      </div>
+    </article>`;
+  }
+
+  function render(){ renderShops(); renderApp(); }
+
+  // ----- actions -----
+  function findItem(id){ const d=cur(); if(!d) return null; const arr=d[currentKind]; if(!Array.isArray(arr)) return null; const i=arr.findIndex(x=>x.id===id); return i<0?null:{arr,i,it:arr[i]}; }
+  function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),1400); }
+  async function copyText(text, btn){
+    let ok=false;
+    try{ await navigator.clipboard.writeText(text); ok=true; }catch(e){
+      try{ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(e2){}
+    }
+    if(btn){ const old=btn.textContent; btn.classList.add('done'); btn.textContent = ok?'Copié ✓':'Échec'; setTimeout(()=>{btn.classList.remove('done'); btn.textContent=old;},1200); }
+    if(ok) toast('Copié');
+  }
+  function splitBulk(s){ return s.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean); }
+
+  document.addEventListener('click', async e=>{
+    const t = e.target.closest('button,[data-expand]'); if(!t) return;
+    const d = t.dataset;
+    if(d.shop){ currentShop=d.shop; savePref('shop',currentShop); render(); return; }
+    if(t.id==='addShop'){
+      const id = uid(); shops[id] = emptyShop('Nouvelle boutique'); currentShop=id; savePref('shop',id);
+      persist(id); render(); const h=$('#renameShop'); if(h) h.click(); return;
+    }
+    if(t.id==='renameShop'){
+      const shop = shops[currentShop]; const h=$('#shopName');
+      h.outerHTML = `<input type="text" id="shopNameInput" class="grow" value="${esc(shop.nom)}" aria-label="Nom de la boutique" style="font-family:var(--display);font-weight:700;font-size:17px">`;
+      const inp=$('#shopNameInput'); inp.focus(); inp.select();
+      const done=()=>{ shop.nom = inp.value.trim()||shop.nom; persist(currentShop); render(); };
+      inp.addEventListener('blur',done,{once:true});
+      inp.addEventListener('keydown',ev=>{ if(ev.key==='Enter') inp.blur(); });
+      return;
+    }
+    if(t.id==='delShop'){ pendingConfirm['shop:'+currentShop]=true; renderApp(); return; }
+    if(t.id==='delShopNo'){ delete pendingConfirm['shop:'+currentShop]; renderApp(); return; }
+    if(t.id==='delShopYes'){ const id=currentShop; delete pendingConfirm['shop:'+id]; await removeShop(id); currentShop=null; render(); toast('Boutique supprimée'); return; }
+    if(d.plat){ currentPlat=d.plat; savePref('plat',currentPlat); showBulk=false; renderApp(); return; }
+    if(d.kind){ currentKind=d.kind; savePref('kind',currentKind); showBulk=false; renderApp(); return; }
+    if(t.id==='toggleBulk'){ showBulk=!showBulk; renderApp(); if(showBulk){ const b=$('#bulkText'); if(b) b.focus(); } return; }
+    if(t.id==='bulkAdd'){
+      const parts=splitBulk($('#bulkText').value); if(!parts.length) return;
+      const arr=cur()[currentKind]; parts.forEach(p=>arr.push({id:uid(), text:p}));
+      showBulk=false; persist(currentShop); renderApp(); toast(parts.length+' ajouté'+(parts.length>1?'s':'')); return;
+    }
+    if(t.id==='addOne'){
+      const it={id:uid(), text:''}; cur()[currentKind].unshift(it); editing[it.id]=true; renderApp();
+      const ta=$('#t-'+it.id); if(ta) ta.focus(); return;
+    }
+    if(d.copy){ const f=findItem(d.copy); if(f) copyText(f.it.text||'', t); return; }
+    if(d.copyreg){ copyText(cur().reglages.filter(r=>r.on).map(r=>'✓ '+r.label).join('\n'), t); return; }
+    if(d.editBtn){ editing[d.editBtn]=true; renderApp(); const ta=$('#t-'+d.editBtn); if(ta){ ta.focus(); } return; }
+    if(d.cancel){ const f=findItem(d.cancel); delete editing[d.cancel]; if(f && !f.it.text){ f.arr.splice(f.i,1); } renderApp(); return; }
+    if(d.save){ const f=findItem(d.save); const ta=$('#t-'+d.save); if(f && ta){ f.it.text=ta.value; } delete editing[d.save]; if(f && !f.it.text.trim()){ f.arr.splice(f.i,1); } persist(currentShop); renderApp(); return; }
+    if(d.expand && !t.matches('textarea')){ expanded[d.expand]=!expanded[d.expand]; renderApp(); return; }
+    if(d.del){ pendingConfirm['it:'+d.del]=true; renderApp(); return; }
+    if(d.delno){ delete pendingConfirm['it:'+d.delno]; renderApp(); return; }
+    if(d.delyes){ const f=findItem(d.delyes); delete pendingConfirm['it:'+d.delyes]; if(f){ f.arr.splice(f.i,1); persist(currentShop); } renderApp(); toast('Supprimé'); return; }
+    if(d.tog){ const r=cur().reglages[+d.tog]; r.on=!r.on; persist(currentShop); renderApp(); return; }
+    if(d.rm){ cur().reglages.splice(+d.rm,1); persist(currentShop); renderApp(); return; }
+  });
+
+  document.addEventListener('input', e=>{
+    const t=e.target;
+    if(t.dataset.edit){
+      const art=t.closest('.item'); const lab=art&&art.querySelector('.count');
+      if(lab){ const n=[...t.value].length; const lim=lab.textContent.includes('/')?+lab.textContent.split('/')[1]:0; lab.textContent = lim? n+' / '+lim : n+' caractères'; lab.classList.toggle('over', !!lim&&n>lim); }
+    }
+  });
+  function addReg(inp){ const v=inp.value.trim(); if(!v) return; inp.value=''; cur().reglages.push({label:v,on:true}); persist(currentShop); renderApp(); const n=$('#addReg'); if(n) n.focus(); }
+  document.addEventListener('keydown', e=>{ if(e.target.id==='addReg' && e.key==='Enter'){ e.preventDefault(); addReg(e.target); } });
+  document.addEventListener('focusout', e=>{ if(e.target.id==='addReg' && e.target.value.trim()) addReg(e.target); });
+
+  // ----- démarrage -----
+  loadLocal();
+  if(!Object.keys(shops).length){ shops = JSON.parse(JSON.stringify(DEFAULT_SHOPS)); Object.values(shops).forEach(normalize); saveLocal(); }
+  currentPlat = PLAT_IDS.includes(getPref('plat')) ? getPref('plat') : 'youtube';
+  currentKind = KINDS.find(k=>k.id===getPref('kind')) ? getPref('kind') : 'descriptions';
+  render();
+  setStatus('Enregistré sur cet appareil');
+})();
+</script>
+
+</body>
+</html>
